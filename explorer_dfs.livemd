@@ -1,0 +1,202 @@
+# Explorer_DFs
+
+```elixir
+Mix.install([
+  {:req, "~> 0.4.8"},
+  {:explorer, "~> 0.8.0"},
+  {:kino_explorer, "~> 0.1.18"},
+  {:kino_vega_lite, "~> 0.1.10"},
+  {:kino_db, "~> 0.2.3"},
+  {:postgrex, ">= 0.0.0"},
+  {:kino_maplibre, "~> 0.1.10"}
+])
+```
+
+## Section
+
+### Using the following sources:
+
+* https://medium.com/elemental-elixir/data-analysis-with-elixir-3e130a5d429e
+
+```elixir
+require Explorer.DataFrame, as: DF
+require Explorer.Series, as: Series
+```
+
+```elixir
+response =
+  Req.get!("https://raw.githubusercontent.com/joaorlima/data-sets/master/premier-league-data.txt")
+```
+
+```elixir
+df = DF.load_csv!(response.body)
+```
+
+```elixir
+df
+```
+
+```elixir
+sum1 =
+  df
+  |> DF.lazy()
+  |> DF.group_by(:season)
+  |> DF.summarise(count: count(season))
+```
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOm51bGwsImNvbGxlY3QiOmZhbHNlLCJkYXRhX2ZyYW1lIjoic3VtMSIsImRhdGFfZnJhbWVfYWxpYXMiOiJFbGl4aXIuREYiLCJpc19kYXRhX2ZyYW1lIjp0cnVlLCJtaXNzaW5nX3JlcXVpcmUiOm51bGwsIm9wZXJhdGlvbnMiOlt7ImFjdGl2ZSI6dHJ1ZSwiY29sdW1uIjpudWxsLCJkYXRhX29wdGlvbnMiOnsiY291bnQiOiJpbnRlZ2VyIiwic2Vhc29uIjoic3RyaW5nIn0sImRhdGFsaXN0IjpbXSwiZmlsdGVyIjpudWxsLCJvcGVyYXRpb25fdHlwZSI6ImZpbHRlcnMiLCJ0eXBlIjoic3RyaW5nIiwidmFsdWUiOm51bGx9XX0","chunks":null,"kind":"Elixir.KinoExplorer.DataTransformCell","livebook_object":"smart_cell"} -->
+
+```elixir
+sum1
+```
+
+```elixir
+df =
+  df
+  |> DF.put(
+    :season,
+    Series.transform(df[:season], fn n ->
+      if n == "?" do
+        "Unknown season"
+      else
+        n
+      end
+    end)
+  )
+```
+
+```elixir
+df =
+  df
+  |> DF.mutate(
+    result:
+      select(
+        home_goals > away_goals,
+        from_list(["H"]),
+        select(home_goals < away_goals, from_list(["A"]), from_list(["D"]))
+      )
+  )
+```
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOm51bGwsImNvbGxlY3QiOmZhbHNlLCJkYXRhX2ZyYW1lIjoiZGYiLCJkYXRhX2ZyYW1lX2FsaWFzIjoiRWxpeGlyLkRGIiwiaXNfZGF0YV9mcmFtZSI6dHJ1ZSwibWlzc2luZ19yZXF1aXJlIjpudWxsLCJvcGVyYXRpb25zIjpbeyJhY3RpdmUiOnRydWUsImNvbHVtbiI6bnVsbCwiZGF0YV9vcHRpb25zIjp7ImF3YXlfZ29hbHMiOiJpbnRlZ2VyIiwiYXdheV90ZWFtIjoic3RyaW5nIiwiaG9tZV9nb2FscyI6ImludGVnZXIiLCJob21lX3RlYW0iOiJzdHJpbmciLCJyZXN1bHQiOiJzdHJpbmciLCJzZWFzb24iOiJzdHJpbmcifSwiZGF0YWxpc3QiOltdLCJmaWx0ZXIiOm51bGwsIm9wZXJhdGlvbl90eXBlIjoiZmlsdGVycyIsInR5cGUiOiJzdHJpbmciLCJ2YWx1ZSI6bnVsbH0seyJhY3RpdmUiOnRydWUsImNvbHVtbnMiOlsicmVzdWx0Il0sImRhdGFfb3B0aW9ucyI6eyJhd2F5X2dvYWxzIjoiaW50ZWdlciIsImF3YXlfdGVhbSI6InN0cmluZyIsImhvbWVfZ29hbHMiOiJpbnRlZ2VyIiwiaG9tZV90ZWFtIjoic3RyaW5nIiwicmVzdWx0Ijoic3RyaW5nIiwic2Vhc29uIjoic3RyaW5nIn0sIm9wZXJhdGlvbl90eXBlIjoiZ3JvdXBfYnkifSx7ImFjdGl2ZSI6dHJ1ZSwiY29sdW1ucyI6W10sImRhdGFfb3B0aW9ucyI6eyJhd2F5X2dvYWxzIjoiaW50ZWdlciIsImF3YXlfdGVhbSI6InN0cmluZyIsImhvbWVfZ29hbHMiOiJpbnRlZ2VyIiwiaG9tZV90ZWFtIjoic3RyaW5nIiwicmVzdWx0Ijoic3RyaW5nIiwic2Vhc29uIjoic3RyaW5nIn0sIm9wZXJhdGlvbl90eXBlIjoic3VtbWFyaXNlIiwicXVlcnkiOiJjb3VudCJ9XX0","chunks":null,"kind":"Elixir.KinoExplorer.DataTransformCell","livebook_object":"smart_cell"} -->
+
+```elixir
+df |> DF.lazy() |> DF.group_by("result")
+```
+
+```elixir
+df =
+  df
+  |> DF.mutate(
+    result:
+      select(
+        home_goals > away_goals,
+        from_list(["H"]),
+        select(home_goals < away_goals, from_list(["A"]), from_list(["D"]))
+      )
+  )
+```
+
+```elixir
+Series.subtract(df[:home_goals], df[:away_goals])
+|> Series.abs()
+|> Series.max()
+```
+
+```elixir
+df
+|> DF.mutate_with(fn d ->
+  diff = Series.subtract(d[:home_goals], d[:away_goals]) |> Series.abs()
+  [diff: diff]
+end)
+|> DF.sort_by(desc: diff)
+```
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOm51bGwsImNvbGxlY3QiOmZhbHNlLCJkYXRhX2ZyYW1lIjoiZGYiLCJkYXRhX2ZyYW1lX2FsaWFzIjoiRWxpeGlyLkRGIiwiaXNfZGF0YV9mcmFtZSI6dHJ1ZSwibWlzc2luZ19yZXF1aXJlIjpudWxsLCJvcGVyYXRpb25zIjpbeyJhY3RpdmUiOnRydWUsImNvbHVtbiI6InJlc3VsdCIsImRhdGFfb3B0aW9ucyI6eyJhd2F5X2dvYWxzIjoiaW50ZWdlciIsImF3YXlfdGVhbSI6InN0cmluZyIsImhvbWVfZ29hbHMiOiJpbnRlZ2VyIiwiaG9tZV90ZWFtIjoic3RyaW5nIiwicmVzdWx0Ijoic3RyaW5nIiwic2Vhc29uIjoic3RyaW5nIn0sImRhdGFsaXN0IjpbIkQiLCJIIiwiQSJdLCJmaWx0ZXIiOiJlcXVhbCIsIm1lc3NhZ2UiOm51bGwsIm9wZXJhdGlvbl90eXBlIjoiZmlsdGVycyIsInR5cGUiOiJzdHJpbmciLCJ2YWx1ZSI6IkEifSx7ImFjdGl2ZSI6dHJ1ZSwiY29sdW1ucyI6WyJhd2F5X3RlYW0iXSwiZGF0YV9vcHRpb25zIjp7ImF3YXlfZ29hbHMiOiJpbnRlZ2VyIiwiYXdheV90ZWFtIjoic3RyaW5nIiwiaG9tZV9nb2FscyI6ImludGVnZXIiLCJob21lX3RlYW0iOiJzdHJpbmciLCJyZXN1bHQiOiJzdHJpbmciLCJzZWFzb24iOiJzdHJpbmcifSwib3BlcmF0aW9uX3R5cGUiOiJncm91cF9ieSJ9LHsiYWN0aXZlIjp0cnVlLCJjb2x1bW5zIjpbImF3YXlfdGVhbSJdLCJkYXRhX29wdGlvbnMiOnsiYXdheV9nb2FscyI6ImludGVnZXIiLCJhd2F5X3RlYW0iOiJzdHJpbmciLCJob21lX2dvYWxzIjoiaW50ZWdlciIsImhvbWVfdGVhbSI6InN0cmluZyIsInJlc3VsdCI6InN0cmluZyIsInNlYXNvbiI6InN0cmluZyJ9LCJvcGVyYXRpb25fdHlwZSI6InN1bW1hcmlzZSIsInF1ZXJ5IjoiY291bnQifSx7ImFjdGl2ZSI6dHJ1ZSwiZGF0YV9vcHRpb25zIjp7ImF3YXlfdGVhbSI6InN0cmluZyIsImF3YXlfdGVhbV9jb3VudCI6ImludGVnZXIifSwiZGlyZWN0aW9uIjoiZGVzYyIsIm9wZXJhdGlvbl90eXBlIjoic29ydGluZyIsInNvcnRfYnkiOiJhd2F5X3RlYW1fY291bnQifV19","chunks":null,"kind":"Elixir.KinoExplorer.DataTransformCell","livebook_object":"smart_cell"} -->
+
+```elixir
+df
+|> DF.lazy()
+|> DF.filter(result == "A")
+|> DF.group_by("away_team")
+|> DF.summarise(away_team_count: count(away_team))
+|> DF.sort_by(desc: away_team_count)
+```
+
+```elixir
+df =
+  df
+  |> Explorer.DataFrame.rename(season: :new_season_name)
+```
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOm51bGwsImNvbGxlY3QiOmZhbHNlLCJkYXRhX2ZyYW1lIjoiZGYiLCJkYXRhX2ZyYW1lX2FsaWFzIjoiRWxpeGlyLkRGIiwiaXNfZGF0YV9mcmFtZSI6dHJ1ZSwibWlzc2luZ19yZXF1aXJlIjpudWxsLCJvcGVyYXRpb25zIjpbeyJhY3RpdmUiOnRydWUsImNvbHVtbnMiOlsiaG9tZV90ZWFtIl0sImRhdGFfb3B0aW9ucyI6eyJhd2F5X2dvYWxzIjoiaW50ZWdlciIsImF3YXlfdGVhbSI6InN0cmluZyIsImhvbWVfZ29hbHMiOiJpbnRlZ2VyIiwiaG9tZV90ZWFtIjoic3RyaW5nIiwibmV3X3NlYXNvbl9uYW1lIjoic3RyaW5nIiwicmVzdWx0Ijoic3RyaW5nIn0sIm9wZXJhdGlvbl90eXBlIjoiZ3JvdXBfYnkifSx7ImFjdGl2ZSI6dHJ1ZSwiY29sdW1ucyI6WyJob21lX2dvYWxzIl0sImRhdGFfb3B0aW9ucyI6eyJhd2F5X2dvYWxzIjoiaW50ZWdlciIsImF3YXlfdGVhbSI6InN0cmluZyIsImhvbWVfZ29hbHMiOiJpbnRlZ2VyIiwiaG9tZV90ZWFtIjoic3RyaW5nIiwibmV3X3NlYXNvbl9uYW1lIjoic3RyaW5nIiwicmVzdWx0Ijoic3RyaW5nIn0sIm9wZXJhdGlvbl90eXBlIjoic3VtbWFyaXNlIiwicXVlcnkiOiJzdW0ifSx7ImFjdGl2ZSI6dHJ1ZSwiZGF0YV9vcHRpb25zIjp7ImhvbWVfZ29hbHNfc3VtIjoiaW50ZWdlciIsImhvbWVfdGVhbSI6InN0cmluZyJ9LCJkaXJlY3Rpb24iOiJkZXNjIiwib3BlcmF0aW9uX3R5cGUiOiJzb3J0aW5nIiwic29ydF9ieSI6ImhvbWVfZ29hbHNfc3VtIn1dfQ","chunks":null,"kind":"Elixir.KinoExplorer.DataTransformCell","livebook_object":"smart_cell"} -->
+
+```elixir
+df
+|> DF.lazy()
+|> DF.group_by("home_team")
+|> DF.summarise(home_goals_sum: sum(home_goals))
+|> DF.sort_by(desc: home_goals_sum)
+```
+
+```elixir
+df
+|> DF.lazy()
+|> DF.group_by("home_team")
+|> DF.summarise(home_goals_summary: sum(home_goals))
+|> DF.sort_by(desc: home_goals_summary)
+|> DF.rename(home_goals_summary: "home_goals_scored_per_season")
+```
+
+```elixir
+df
+|> DF.lazy()
+|> DF.group_by(:home_team)
+|> DF.summarise(
+  home_games_played: count(home_team),
+  home_goals_conceded: sum(away_goals)
+)
+|> DF.sort_by(desc: home_games_played, asc: home_goals_conceded)
+```
+
+```elixir
+MapLibre.new(style: :street, center: {8.993146703746941, 47.274240500000005}, zoom: 3)
+|> MapLibre.add_geocode_source("lausanne_city", "Lausanne", :city)
+|> MapLibre.add_layer(
+  id: "lausanne_city_circle_1",
+  source: "lausanne_city",
+  type: :circle,
+  paint: [circle_color: "#e01a7a", circle_radius: 6, circle_opacity: 0.3]
+)
+```
+
+<!-- livebook:{"attrs":"eyJjZW50ZXIiOiI4Ljk5MzE0NjcwMzc0Njk0MSwgNDcuMjc0MjQwNTAwMDAwMDA1IiwibGF5ZXJzIjpbeyJhY3RpdmUiOnRydWUsImNsdXN0ZXJfY29sb3JzIjpbIiM1MWJiZDYiLCIjZjFmMDc1IiwiI2YyOGNiMSJdLCJjbHVzdGVyX21heCI6NzUwLCJjbHVzdGVyX21pbiI6MTAwLCJjb29yZGluYXRlc19mb3JtYXQiOiJsbmdfbGF0IiwibGF5ZXJfY29sb3IiOiIjZTAxYTdhIiwibGF5ZXJfb3BhY2l0eSI6MC4zLCJsYXllcl9yYWRpdXMiOjE5LCJsYXllcl9zb3VyY2UiOiLwn4yOIEdlb2NvZGluZyIsImxheWVyX3NvdXJjZV9xdWVyeSI6IiBadXJpY2giLCJsYXllcl9zb3VyY2VfcXVlcnlfc3RyaWN0IjoiY2l0eSIsImxheWVyX3R5cGUiOiJjaXJjbGUiLCJzb3VyY2VfY29vcmRpbmF0ZXMiOm51bGwsInNvdXJjZV9sYXRpdHVkZSI6bnVsbCwic291cmNlX2xvbmdpdHVkZSI6bnVsbCwic291cmNlX3R5cGUiOiJxdWVyeSJ9XSwibWFwdGlsZXJfa2V5IjpudWxsLCJtYXB0aWxlcl9rZXlfc2VjcmV0IjpudWxsLCJtbF9hbGlhcyI6IkVsaXhpci5NYXBMaWJyZSIsInN0eWxlIjoic3RyZWV0IChub24tY29tbWVyY2lhbCkiLCJ1c2VfbWFwdGlsZXJfa2V5X3NlY3JldCI6dHJ1ZSwiem9vbSI6OH0","chunks":null,"kind":"Elixir.KinoMapLibre.MapCell","livebook_object":"smart_cell"} -->
+
+```elixir
+MapLibre.new(style: :street, center: {8.993146703746941, 47.274240500000005}, zoom: 8)
+|> MapLibre.add_geocode_source("_zurich_city", " Zurich", :city)
+|> MapLibre.add_layer(
+  id: "_zurich_city_circle_1",
+  source: "_zurich_city",
+  type: :circle,
+  paint: [circle_color: "#e01a7a", circle_radius: 19, circle_opacity: 0.3]
+)
+```
+
+<!-- livebook:{"attrs":"eyJjaGFydF90aXRsZSI6InBsb3QiLCJoZWlnaHQiOm51bGwsImxheWVycyI6W3siYWN0aXZlIjp0cnVlLCJjaGFydF90eXBlIjoiYm94cGxvdCIsImNvbG9yX2ZpZWxkIjpudWxsLCJjb2xvcl9maWVsZF9hZ2dyZWdhdGUiOm51bGwsImNvbG9yX2ZpZWxkX2JpbiI6bnVsbCwiY29sb3JfZmllbGRfc2NhbGVfc2NoZW1lIjpudWxsLCJjb2xvcl9maWVsZF90eXBlIjpudWxsLCJkYXRhX3ZhcmlhYmxlIjoiZGYiLCJnZW9kYXRhX2NvbG9yIjoiYmx1ZSIsImxhdGl0dWRlX2ZpZWxkIjpudWxsLCJsb25naXR1ZGVfZmllbGQiOm51bGwsInhfZmllbGQiOiJhd2F5X3RlYW0iLCJ4X2ZpZWxkX2FnZ3JlZ2F0ZSI6bnVsbCwieF9maWVsZF9iaW4iOm51bGwsInhfZmllbGRfc2NhbGVfdHlwZSI6bnVsbCwieF9maWVsZF90eXBlIjoibm9taW5hbCIsInlfZmllbGQiOiJhd2F5X2dvYWxzIiwieV9maWVsZF9hZ2dyZWdhdGUiOm51bGwsInlfZmllbGRfYmluIjpudWxsLCJ5X2ZpZWxkX3NjYWxlX3R5cGUiOm51bGwsInlfZmllbGRfdHlwZSI6InF1YW50aXRhdGl2ZSJ9XSwidmxfYWxpYXMiOiJFbGl4aXIuVmVnYUxpdGUiLCJ3aWR0aCI6bnVsbH0","chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+VegaLite.new(title: "plot")
+|> VegaLite.data_from_values(df, only: ["away_team", "away_goals"])
+|> VegaLite.mark(:boxplot)
+|> VegaLite.encode_field(:x, "away_team", type: :nominal)
+|> VegaLite.encode_field(:y, "away_goals", type: :quantitative)
+```
+
+```elixir
+VegaLite.new(title: "plot")
+|> VegaLite.data_from_values(df, only: ["away_team", "away_goals"])
+|> VegaLite.mark(:boxplot)
+|> VegaLite.encode_field(:x, "away_team", type: :nominal)
+|> VegaLite.encode_field(:y, "away_goals", type: :quantitative)
+```
